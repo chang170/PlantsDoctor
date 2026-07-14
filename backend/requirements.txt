@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+Pillow
+torch
+torchvision
+transformers
+huggingface-hub
+groq

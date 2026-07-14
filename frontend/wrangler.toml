@@ -1,0 +1,6 @@
+name = "plant-health-ai"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = ".next"
+
+[vars]
+NEXT_PUBLIC_API_URL = "https://YOUR-HF-SPACE-NAME.hf.space"
