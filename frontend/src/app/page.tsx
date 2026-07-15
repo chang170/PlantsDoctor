@@ -47,14 +47,47 @@ export default function Home() {
     }
   };
 
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d")!;
+      const img = new Image();
+      img.onload = () => {
+        const maxSize = 1024;
+        let { width, height } = img;
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = (height / width) * maxSize;
+            width = maxSize;
+          } else {
+            width = (width / height) * maxSize;
+            height = maxSize;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            resolve(new File([blob!], file.name, { type: "image/jpeg" }));
+          },
+          "image/jpeg",
+          0.8
+        );
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const handleAnalyze = async () => {
     if (!file) return;
     setLoading(true);
     setError(null);
 
     try {
+      const compressed = await compressImage(file);
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", compressed);
 
       const response = await fetch(`${API_URL}/analyze`, {
         method: "POST",
