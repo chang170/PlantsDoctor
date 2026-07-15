@@ -92,13 +92,20 @@ export default function Home() {
       const response = await fetch(`${API_URL}/analyze`, {
         method: "POST",
         body: formData,
+        signal: AbortSignal.timeout(60000),
       });
 
       if (!response.ok) throw new Error("Analysis failed");
       const data: AnalysisResult = await response.json();
       setResult(data);
     } catch (err) {
-      setError("Failed to analyze image. Please try again.");
+      if (err instanceof Error && err.name === "TimeoutError") {
+        setError("Request timed out. The server may be waking up — please try again.");
+      } else if (err instanceof Error) {
+        setError(`Failed: ${err.message}`);
+      } else {
+        setError("Failed to analyze image. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
