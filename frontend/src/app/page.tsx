@@ -88,17 +88,37 @@ export default function Home() {
       <InstallPrompt />
 
       {!image && (
-        <div className="upload-area" onClick={() => fileInputRef.current?.click()}>
+        <div className="upload-buttons">
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
+            onChange={handleImageSelect}
+            aria-label="Upload plant image from gallery"
+            style={{ display: "none" }}
+          />
+          <input
+            id="camera-input"
+            type="file"
+            accept="image/*"
             capture="environment"
             onChange={handleImageSelect}
-            aria-label="Upload plant image"
+            aria-label="Take a photo"
+            style={{ display: "none" }}
           />
-          <div className="icon">📸</div>
-          <p>Tap to take a photo or upload an image</p>
+          <button
+            className="btn btn-primary"
+            onClick={() => fileInputRef.current?.click()}
+            style={{ marginBottom: "0.75rem" }}
+          >
+            🖼️ Choose from Gallery
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={() => document.getElementById("camera-input")?.click()}
+          >
+            📸 Take a Photo
+          </button>
         </div>
       )}
 

@@ -47,6 +47,10 @@ body {
   border-color: #16a34a;
 }
 
+.upload-buttons {
+  margin: 1.5rem 0;
+}
+
 .upload-area input {
   display: none;
 }
