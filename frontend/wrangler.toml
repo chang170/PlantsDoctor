@@ -1,6 +1,10 @@
-name = "plant-health-ai"
+name = "plantsdoctor"
 compatibility_date = "2024-09-23"
-pages_build_output_dir = ".next"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
 
 [vars]
 NEXT_PUBLIC_API_URL = "https://plantsdoctor-uhrl.onrender.com"
