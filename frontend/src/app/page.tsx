@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import InstallPrompt from "./install-prompt";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://plantsdoctor-uhrl.onrender.com";
 
 interface PlantResult {
   plant_name: string;
