@@ -92,3 +92,40 @@ body {
   color: #374151;
   margin-top: 0.5rem;
 }
+
+.card {
+  background: white;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.card-title {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.card-value {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.card-subtitle {
+  font-size: 0.875rem;
+  color: #888;
+  margin-top: 0.125rem;
+}
+
+.card-detail {
+  font-size: 0.875rem;
+  margin-top: 0.375rem;
+  line-height: 1.4;
+}
+
+.card-confidence {
+  font-size: 0.75rem;
+  color: #999;
+  margin-top: 0.25rem;
+}

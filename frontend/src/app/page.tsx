@@ -7,6 +7,10 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://plantsdoctor-uhrl.on
 
 interface PlantResult {
   plant_name: string;
+  scientific_name: string;
+  other_common_names: string[];
+  origin: string;
+  category: string;
   confidence: number;
   all_predictions: { name: string; confidence: number }[];
 }
@@ -18,6 +22,22 @@ interface HealthResult {
   all_predictions: { condition: string; confidence: number }[];
 }
 
+interface Details {
+  watering: string;
+  sunlight: string;
+  soil_type: string;
+  toxicity: string;
+  growth_rate: string;
+  mature_size: string;
+  season: string;
+  difficulty: string;
+  fun_fact: string;
+  ripeness: string | null;
+  edibility: string | null;
+  nutrition: string | null;
+  storage_tips: string | null;
+}
+
 interface Suggestions {
   issue: string;
   suggestions: string[];
@@ -26,6 +46,7 @@ interface Suggestions {
 interface AnalysisResult {
   plant: PlantResult;
   health: HealthResult;
+  details: Details;
   suggestions: Suggestions;
 }
 
@@ -89,32 +110,26 @@ export default function Home() {
       const formData = new FormData();
       formData.append("file", compressed);
 
-      const url = `${API_URL}/analyze`;
-      const startTime = Date.now();
-      
-      const response = await fetch(url, {
+      const response = await fetch(`${API_URL}/analyze`, {
         method: "POST",
         body: formData,
         signal: AbortSignal.timeout(120000),
       });
 
-      const elapsed = Date.now() - startTime;
-
       if (!response.ok) {
         const text = await response.text();
-        throw new Error(`HTTP ${response.status}: ${text} (${elapsed}ms)`);
+        throw new Error(`HTTP ${response.status}: ${text}`);
       }
       const data: AnalysisResult = await response.json();
       setResult(data);
     } catch (err) {
-      const details = [
-        `Error: ${err instanceof Error ? err.message : String(err)}`,
-        `Type: ${err instanceof Error ? err.name : "unknown"}`,
-        `URL: ${API_URL}/analyze`,
-        `File size: ${file ? Math.round(file.size / 1024) + "KB" : "none"}`,
-        `Browser: ${navigator.userAgent.slice(0, 80)}`,
-      ].join("\n");
-      setError(details);
+      if (err instanceof Error && err.name === "TimeoutError") {
+        setError("Request timed out. Please try again.");
+      } else if (err instanceof Error) {
+        setError(`Failed: ${err.message}`);
+      } else {
+        setError("Failed to analyze image. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -131,7 +146,7 @@ export default function Home() {
     <div className="container">
       <header className="header">
         <h1>🌿 Plant Health AI</h1>
-        <p>Take a photo of your plant to identify it and check its health</p>
+        <p>Identify plants, fruits, and vegetables — get health info and care tips</p>
       </header>
 
       <InstallPrompt />
@@ -180,67 +195,92 @@ export default function Home() {
               onClick={handleAnalyze}
               disabled={loading}
             >
-              {loading ? "Analyzing... (this may take up to 2 min)" : "Analyze Plant"}
+              {loading ? "Analyzing... (this may take a moment)" : "Analyze"}
             </button>
           )}
         </>
       )}
 
-      {error && <pre style={{ color: "#dc2626", marginTop: "1rem", fontSize: "0.75rem", whiteSpace: "pre-wrap", wordBreak: "break-all", background: "#fee2e2", padding: "0.75rem", borderRadius: "0.5rem" }}>{error}</pre>}
+      {error && <p style={{ color: "#dc2626", marginTop: "1rem", fontSize: "0.875rem" }}>{error}</p>}
 
       {result && (
         <div style={{ marginTop: "1.5rem" }}>
-          <ResultCard
-            title="🌱 Plant Identified"
-            value={result.plant.plant_name}
-            confidence={result.plant.confidence}
-          />
-          <ResultCard
-            title={result.health.status === "healthy" ? "✅ Health Status" : "⚠️ Health Status"}
-            value={result.health.condition}
-            confidence={result.health.confidence}
-          />
+          <PlantCard plant={result.plant} />
+          <HealthCard health={result.health} />
+          <DetailsCard details={result.details} category={result.plant.category} />
           <SuggestionsCard suggestions={result.suggestions} />
         </div>
       )}
 
       {image && (
         <button className="btn btn-secondary" onClick={handleReset}>
-          Analyze Another Plant
+          Analyze Another
         </button>
       )}
     </div>
   );
 }
 
-function ResultCard({ title, value, confidence }: { title: string; value: string; confidence: number }) {
+function PlantCard({ plant }: { plant: PlantResult }) {
   return (
-    <div style={{
-      background: "white",
-      borderRadius: "0.75rem",
-      padding: "1rem",
-      marginBottom: "0.75rem",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
-    }}>
-      <h3 style={{ fontSize: "0.875rem", color: "#666" }}>{title}</h3>
-      <p style={{ fontSize: "1.125rem", fontWeight: 600, marginTop: "0.25rem" }}>{value}</p>
-      <p style={{ fontSize: "0.75rem", color: "#999", marginTop: "0.25rem" }}>
-        Confidence: {Math.round(confidence * 100)}%
-      </p>
+    <div className="card">
+      <h3 className="card-title">🌱 Identified</h3>
+      <p className="card-value">{plant.plant_name}</p>
+      {plant.scientific_name && (
+        <p className="card-subtitle"><em>{plant.scientific_name}</em></p>
+      )}
+      {plant.category && (
+        <p className="card-detail"><strong>Type:</strong> {plant.category}</p>
+      )}
+      {plant.origin && (
+        <p className="card-detail"><strong>Origin:</strong> {plant.origin}</p>
+      )}
+      {plant.other_common_names && plant.other_common_names.length > 0 && (
+        <p className="card-detail"><strong>Also known as:</strong> {plant.other_common_names.join(", ")}</p>
+      )}
+      <p className="card-confidence">Confidence: {Math.round(plant.confidence * 100)}%</p>
+    </div>
+  );
+}
+
+function HealthCard({ health }: { health: HealthResult }) {
+  const icon = health.status === "healthy" ? "✅" : "⚠️";
+  return (
+    <div className="card">
+      <h3 className="card-title">{icon} Health Status</h3>
+      <p className="card-value">{health.condition}</p>
+      <p className="card-confidence">Confidence: {Math.round(health.confidence * 100)}%</p>
+    </div>
+  );
+}
+
+function DetailsCard({ details, category }: { details: Details; category: string }) {
+  const isFruitOrVeg = category === "fruit" || category === "vegetable";
+
+  return (
+    <div className="card">
+      <h3 className="card-title">📋 Details</h3>
+      {details.watering && <p className="card-detail"><strong>💧 Watering:</strong> {details.watering}</p>}
+      {details.sunlight && <p className="card-detail"><strong>☀️ Sunlight:</strong> {details.sunlight}</p>}
+      {details.soil_type && <p className="card-detail"><strong>🪴 Soil:</strong> {details.soil_type}</p>}
+      {details.toxicity && <p className="card-detail"><strong>⚠️ Toxicity:</strong> {details.toxicity}</p>}
+      {details.growth_rate && <p className="card-detail"><strong>📈 Growth rate:</strong> {details.growth_rate}</p>}
+      {details.mature_size && <p className="card-detail"><strong>📏 Mature size:</strong> {details.mature_size}</p>}
+      {details.season && <p className="card-detail"><strong>🗓️ Season:</strong> {details.season}</p>}
+      {details.difficulty && <p className="card-detail"><strong>🎯 Difficulty:</strong> {details.difficulty}</p>}
+      {isFruitOrVeg && details.ripeness && <p className="card-detail"><strong>🍎 Ripeness:</strong> {details.ripeness}</p>}
+      {isFruitOrVeg && details.edibility && <p className="card-detail"><strong>🍽️ Edibility:</strong> {details.edibility}</p>}
+      {isFruitOrVeg && details.nutrition && <p className="card-detail"><strong>💊 Nutrition:</strong> {details.nutrition}</p>}
+      {isFruitOrVeg && details.storage_tips && <p className="card-detail"><strong>🧊 Storage:</strong> {details.storage_tips}</p>}
+      {details.fun_fact && <p className="card-detail"><strong>💡 Fun fact:</strong> {details.fun_fact}</p>}
     </div>
   );
 }
 
 function SuggestionsCard({ suggestions }: { suggestions: Suggestions }) {
   return (
-    <div style={{
-      background: "white",
-      borderRadius: "0.75rem",
-      padding: "1rem",
-      marginBottom: "0.75rem",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
-    }}>
-      <h3 style={{ fontSize: "0.875rem", color: "#666" }}>💡 Care Suggestions</h3>
+    <div className="card">
+      <h3 className="card-title">💡 Care Suggestions</h3>
       <p style={{ fontWeight: 600, marginTop: "0.25rem" }}>{suggestions.issue}</p>
       <ul style={{ marginTop: "0.5rem", paddingLeft: "1.25rem" }}>
         {suggestions.suggestions.map((s, i) => (

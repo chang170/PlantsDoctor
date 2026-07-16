@@ -19,21 +19,36 @@ class HealthAnalyzer:
 
     MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
-    PROMPT = """You are a plant health expert. Analyze this image and provide:
+    PROMPT = """You are a plant, tree, fruit, and vegetable expert botanist. Analyze this image and provide detailed information.
 
-1. What type of plant this is (species or common name)
-2. Whether the plant looks healthy or unhealthy
-3. If unhealthy, what specific problems you see
-4. Care suggestions based on what you observe
+If the image shows a fruit or vegetable, include ripeness, edibility, nutrition, and storage info.
+If the image shows a plant or tree, include care information.
 
 Respond in this exact JSON format (no markdown, no extra text):
 {
-  "plant_name": "common name of the plant",
+  "plant_name": "common name of the plant/fruit/vegetable",
+  "scientific_name": "Latin/botanical name",
+  "other_common_names": ["other names people call it"],
+  "origin": "native region or country of origin",
+  "category": "houseplant", "tree", "flower", "fruit", "vegetable", "succulent", "herb", or "other",
   "status": "healthy" or "unhealthy",
   "condition": "brief description of the condition",
   "confidence": 0.0 to 1.0,
   "problems": ["list of problems if any"],
-  "suggestions": ["list of care suggestions"]
+  "suggestions": ["list of care suggestions"],
+  "watering": "watering needs description",
+  "sunlight": "sunlight requirements",
+  "soil_type": "preferred soil type",
+  "toxicity": "toxicity info for pets and children",
+  "growth_rate": "slow, medium, or fast",
+  "mature_size": "expected mature height and spread",
+  "season": "blooming, fruiting, or harvest season",
+  "difficulty": "easy, moderate, or hard to care for",
+  "fun_fact": "an interesting fact about this plant",
+  "ripeness": "ripe, unripe, or overripe (for fruits/vegetables only, otherwise null)",
+  "edibility": "is it safe to eat, any warnings (for fruits/vegetables only, otherwise null)",
+  "nutrition": "key vitamins and minerals (for fruits/vegetables only, otherwise null)",
+  "storage_tips": "how to store it (for fruits/vegetables only, otherwise null)"
 }"""
 
     def __init__(self):
@@ -76,7 +91,7 @@ Respond in this exact JSON format (no markdown, no extra text):
                     }
                 ],
                 temperature=0.3,
-                max_completion_tokens=1024,
+                max_completion_tokens=2048,
             )
 
             response_text = completion.choices[0].message.content.strip()
@@ -101,6 +116,23 @@ Respond in this exact JSON format (no markdown, no extra text):
                 ],
                 "plant_name_from_health": data.get("plant_name", ""),
                 "suggestions_from_llm": data.get("suggestions", []),
+                "scientific_name": data.get("scientific_name", ""),
+                "other_common_names": data.get("other_common_names", []),
+                "origin": data.get("origin", ""),
+                "category": data.get("category", ""),
+                "watering": data.get("watering", ""),
+                "sunlight": data.get("sunlight", ""),
+                "soil_type": data.get("soil_type", ""),
+                "toxicity": data.get("toxicity", ""),
+                "growth_rate": data.get("growth_rate", ""),
+                "mature_size": data.get("mature_size", ""),
+                "season": data.get("season", ""),
+                "difficulty": data.get("difficulty", ""),
+                "fun_fact": data.get("fun_fact", ""),
+                "ripeness": data.get("ripeness"),
+                "edibility": data.get("edibility"),
+                "nutrition": data.get("nutrition"),
+                "storage_tips": data.get("storage_tips"),
             }
 
         except json.JSONDecodeError:

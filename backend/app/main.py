@@ -1,7 +1,6 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.models.plant_classifier import PlantClassifier
 from app.models.health_analyzer import HealthAnalyzer
 from app.services.suggestion_engine import SuggestionEngine
 from PIL import Image
@@ -19,7 +18,6 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
-plant_classifier = PlantClassifier()
 health_analyzer = HealthAnalyzer()
 suggestion_engine = SuggestionEngine()
 
@@ -36,21 +34,41 @@ async def analyze_plant(file: UploadFile = File(...)):
         contents = await file.read()
         image = Image.open(io.BytesIO(contents)).convert("RGB")
 
-        # Step 1: Analyze with vision LLM (does both ID and health)
+        # Analyze with vision LLM (does both ID and health)
         health_result = health_analyzer.predict(image)
 
-        # Step 2: Use the LLM's plant identification if available
+        # Extract plant identification and suggestions
         llm_plant_name = health_result.pop("plant_name_from_health", "")
         llm_suggestions = health_result.pop("suggestions_from_llm", [])
 
-        # Step 3: Also run the dedicated plant classifier
-        plant_result = plant_classifier.predict(image)
+        plant_result = {
+            "plant_name": llm_plant_name or "Unknown",
+            "scientific_name": health_result.pop("scientific_name", ""),
+            "other_common_names": health_result.pop("other_common_names", []),
+            "origin": health_result.pop("origin", ""),
+            "category": health_result.pop("category", ""),
+            "confidence": health_result.get("confidence", 0.8),
+            "all_predictions": [],
+        }
 
-        # Prefer LLM plant name if classifier confidence is low
-        if llm_plant_name and plant_result["confidence"] < 0.5:
-            plant_result["plant_name"] = llm_plant_name
+        # Plant care details
+        details = {
+            "watering": health_result.pop("watering", ""),
+            "sunlight": health_result.pop("sunlight", ""),
+            "soil_type": health_result.pop("soil_type", ""),
+            "toxicity": health_result.pop("toxicity", ""),
+            "growth_rate": health_result.pop("growth_rate", ""),
+            "mature_size": health_result.pop("mature_size", ""),
+            "season": health_result.pop("season", ""),
+            "difficulty": health_result.pop("difficulty", ""),
+            "fun_fact": health_result.pop("fun_fact", ""),
+            "ripeness": health_result.pop("ripeness", None),
+            "edibility": health_result.pop("edibility", None),
+            "nutrition": health_result.pop("nutrition", None),
+            "storage_tips": health_result.pop("storage_tips", None),
+        }
 
-        # Step 4: Get care suggestions
+        # Get care suggestions
         if llm_suggestions:
             suggestions = {
                 "issue": health_result["condition"],
@@ -66,6 +84,7 @@ async def analyze_plant(file: UploadFile = File(...)):
         return {
             "plant": plant_result,
             "health": health_result,
+            "details": details,
             "suggestions": suggestions,
         }
     except Exception as e:
