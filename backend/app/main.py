@@ -13,9 +13,10 @@ app = FastAPI(title="Plant Health AI", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 plant_classifier = PlantClassifier()

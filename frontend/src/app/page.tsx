@@ -95,7 +95,7 @@ export default function Home() {
       const response = await fetch(url, {
         method: "POST",
         body: formData,
-        signal: AbortSignal.timeout(60000),
+        signal: AbortSignal.timeout(120000),
       });
 
       const elapsed = Date.now() - startTime;
@@ -180,7 +180,7 @@ export default function Home() {
               onClick={handleAnalyze}
               disabled={loading}
             >
-              {loading ? "Analyzing..." : "Analyze Plant"}
+              {loading ? "Analyzing... (this may take up to 2 min)" : "Analyze Plant"}
             </button>
           )}
         </>
