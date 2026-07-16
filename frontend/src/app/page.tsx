@@ -89,23 +89,32 @@ export default function Home() {
       const formData = new FormData();
       formData.append("file", compressed);
 
-      const response = await fetch(`${API_URL}/analyze`, {
+      const url = `${API_URL}/analyze`;
+      const startTime = Date.now();
+      
+      const response = await fetch(url, {
         method: "POST",
         body: formData,
         signal: AbortSignal.timeout(60000),
       });
 
-      if (!response.ok) throw new Error("Analysis failed");
+      const elapsed = Date.now() - startTime;
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`HTTP ${response.status}: ${text} (${elapsed}ms)`);
+      }
       const data: AnalysisResult = await response.json();
       setResult(data);
     } catch (err) {
-      if (err instanceof Error && err.name === "TimeoutError") {
-        setError("Request timed out. The server may be waking up — please try again.");
-      } else if (err instanceof Error) {
-        setError(`Failed: ${err.message}`);
-      } else {
-        setError("Failed to analyze image. Please try again.");
-      }
+      const details = [
+        `Error: ${err instanceof Error ? err.message : String(err)}`,
+        `Type: ${err instanceof Error ? err.name : "unknown"}`,
+        `URL: ${API_URL}/analyze`,
+        `File size: ${file ? Math.round(file.size / 1024) + "KB" : "none"}`,
+        `Browser: ${navigator.userAgent.slice(0, 80)}`,
+      ].join("\n");
+      setError(details);
     } finally {
       setLoading(false);
     }
@@ -177,7 +186,7 @@ export default function Home() {
         </>
       )}
 
-      {error && <p style={{ color: "#dc2626", marginTop: "1rem" }}>{error}</p>}
+      {error && <pre style={{ color: "#dc2626", marginTop: "1rem", fontSize: "0.75rem", whiteSpace: "pre-wrap", wordBreak: "break-all", background: "#fee2e2", padding: "0.75rem", borderRadius: "0.5rem" }}>{error}</pre>}
 
       {result && (
         <div style={{ marginTop: "1.5rem" }}>
