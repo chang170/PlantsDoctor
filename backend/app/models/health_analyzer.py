@@ -108,6 +108,17 @@ Respond in this exact JSON format (no markdown, no extra text):
 
             response_text = completion.choices[0].message.content.strip()
 
+            # Strip thinking tags if present (Qwen model)
+            if "<think>" in response_text:
+                think_end = response_text.find("</think>")
+                if think_end != -1:
+                    response_text = response_text[think_end + 8:].strip()
+                else:
+                    # Thinking tag opened but not closed, try to find JSON
+                    json_start = response_text.find("{")
+                    if json_start != -1:
+                        response_text = response_text[json_start:]
+
             # Parse JSON from response
             # Handle case where model wraps in markdown code block
             if response_text.startswith("```"):
