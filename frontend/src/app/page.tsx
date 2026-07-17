@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import InstallPrompt from "./install-prompt";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://plantsdoctor-uhrl.onrender.com";
@@ -50,13 +50,31 @@ interface AnalysisResult {
   suggestions: Suggestions;
 }
 
+interface ChatMessage {
+  role: "user" | "assistant";
+  text: string;
+}
+
 export default function Home() {
   const [image, setImage] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Block browser back button
+  useEffect(() => {
+    window.history.pushState(null, "", window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, "", window.location.href);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -65,6 +83,7 @@ export default function Home() {
       setImage(URL.createObjectURL(selected));
       setResult(null);
       setError(null);
+      setChatMessages([]);
     }
   };
 
@@ -135,11 +154,48 @@ export default function Home() {
     }
   };
 
+  const handleFollowUp = async () => {
+    if (!chatInput.trim() || !file || !result) return;
+    const question = chatInput.trim();
+    setChatInput("");
+    setChatMessages((prev) => [...prev, { role: "user", text: question }]);
+    setChatLoading(true);
+
+    try {
+      const compressed = await compressImage(file);
+      const formData = new FormData();
+      formData.append("file", compressed);
+      formData.append("question", question);
+      formData.append("context", JSON.stringify(result));
+
+      const response = await fetch(`${API_URL}/ask`, {
+        method: "POST",
+        body: formData,
+        signal: AbortSignal.timeout(60000),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get answer");
+      }
+      const data = await response.json();
+      setChatMessages((prev) => [...prev, { role: "assistant", text: data.answer }]);
+    } catch (err) {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", text: "Sorry, I couldn't answer that. Please try again." },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   const handleReset = () => {
     setImage(null);
     setFile(null);
     setResult(null);
     setError(null);
+    setChatMessages([]);
+    setChatInput("");
   };
 
   return (
@@ -209,12 +265,61 @@ export default function Home() {
           <HealthCard health={result.health} />
           <DetailsCard details={result.details} category={result.plant.category} />
           <SuggestionsCard suggestions={result.suggestions} />
+
+          {/* Follow-up Chat */}
+          <div className="card" style={{ marginTop: "1rem" }}>
+            <h3 className="card-title">💬 Ask a Follow-up Question</h3>
+            {chatMessages.map((msg, i) => (
+              <div
+                key={i}
+                style={{
+                  marginTop: "0.5rem",
+                  padding: "0.5rem 0.75rem",
+                  borderRadius: "0.5rem",
+                  background: msg.role === "user" ? "#dcfce7" : "#f3f4f6",
+                  textAlign: msg.role === "user" ? "right" : "left",
+                  fontSize: "0.875rem",
+                }}
+              >
+                {msg.text}
+              </div>
+            ))}
+            {chatLoading && (
+              <p style={{ fontSize: "0.8rem", color: "#888", marginTop: "0.5rem" }}>Thinking...</p>
+            )}
+            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}>
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleFollowUp()}
+                placeholder="e.g., Is this toxic to cats?"
+                style={{
+                  flex: 1,
+                  padding: "0.625rem",
+                  borderRadius: "0.5rem",
+                  border: "1px solid #d1d5db",
+                  fontSize: "0.875rem",
+                }}
+                disabled={chatLoading}
+                aria-label="Ask a follow-up question"
+              />
+              <button
+                className="btn btn-primary"
+                onClick={handleFollowUp}
+                disabled={chatLoading || !chatInput.trim()}
+                style={{ width: "auto", padding: "0.625rem 1rem" }}
+              >
+                Ask
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {image && (
-        <button className="btn btn-secondary" onClick={handleReset}>
-          Analyze Another
+        <button className="btn btn-primary" onClick={handleReset} style={{ marginTop: "0.75rem" }}>
+          🔄 Analyze Another Plant
         </button>
       )}
     </div>

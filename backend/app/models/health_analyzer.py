@@ -150,3 +150,55 @@ Respond in this exact JSON format (no markdown, no extra text):
                 "confidence": 0.0,
                 "all_predictions": [],
             }
+
+    def ask_question(self, image: Image.Image, question: str, context: dict) -> str:
+        """Answer a follow-up question about an already-analyzed plant."""
+        if not self.client:
+            return "Unable to answer — GROQ_API_KEY not set."
+
+        # Convert image to base64
+        buffered = BytesIO()
+        image.save(buffered, format="JPEG", quality=85)
+        base64_image = base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+        context_summary = (
+            f"This plant was identified as: {context.get('plant', {}).get('plant_name', 'Unknown')} "
+            f"({context.get('plant', {}).get('scientific_name', '')}).\n"
+            f"Category: {context.get('plant', {}).get('category', '')}.\n"
+            f"Health status: {context.get('health', {}).get('status', 'unknown')} - "
+            f"{context.get('health', {}).get('condition', '')}."
+        )
+
+        prompt = f"""You previously analyzed this plant image. Here is what you found:
+
+{context_summary}
+
+The user has a follow-up question: "{question}"
+
+Please answer the question based on what you can see in the image and your botanical knowledge. 
+Keep the answer concise and helpful (2-4 sentences). Do not use markdown formatting."""
+
+        try:
+            completion = self.client.chat.completions.create(
+                model=self.MODEL,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{base64_image}",
+                                },
+                            },
+                        ],
+                    }
+                ],
+                temperature=0.4,
+                max_completion_tokens=512,
+            )
+
+            return completion.choices[0].message.content.strip()
+        except Exception as e:
+            return f"Sorry, I couldn't answer that: {str(e)}"
