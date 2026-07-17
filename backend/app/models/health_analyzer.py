@@ -18,6 +18,7 @@ class HealthAnalyzer:
     """
 
     MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+    FALLBACK_MODEL = "qwen/qwen3.6-27b"
 
     PROMPT = """You are a plant, tree, fruit, and vegetable expert botanist. Analyze this image and provide detailed information.
 
@@ -73,26 +74,37 @@ Respond in this exact JSON format (no markdown, no extra text):
         image.save(buffered, format="JPEG", quality=85)
         base64_image = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
-        try:
-            completion = self.client.chat.completions.create(
-                model=self.MODEL,
-                messages=[
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": self.PROMPT},
                     {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": self.PROMPT},
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{base64_image}",
-                                },
-                            },
-                        ],
-                    }
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}",
+                        },
+                    },
                 ],
-                temperature=0.3,
-                max_completion_tokens=2048,
-            )
+            }
+        ]
+
+        try:
+            # Try primary model, fall back if unavailable
+            try:
+                completion = self.client.chat.completions.create(
+                    model=self.MODEL,
+                    messages=messages,
+                    temperature=0.3,
+                    max_completion_tokens=2048,
+                )
+            except Exception:
+                completion = self.client.chat.completions.create(
+                    model=self.FALLBACK_MODEL,
+                    messages=messages,
+                    temperature=0.3,
+                    max_completion_tokens=2048,
+                )
 
             response_text = completion.choices[0].message.content.strip()
 
