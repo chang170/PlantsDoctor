@@ -1,11 +1,10 @@
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.models.health_analyzer import HealthAnalyzer
 from app.services.suggestion_engine import SuggestionEngine
 from PIL import Image
 import io
-import json
 import traceback
 
 app = FastAPI(title="Plant Health AI", version="1.0.0")
@@ -97,18 +96,13 @@ async def analyze_plant(file: UploadFile = File(...)):
 
 
 @app.post("/ask")
-async def ask_followup(
-    file: UploadFile = File(...),
-    question: str = Form(...),
-    context: str = Form(...),
-):
-    """Answer a follow-up question about an already-analyzed plant image."""
+async def ask_followup(body: dict):
+    """Answer a follow-up question about an already-analyzed plant."""
     try:
-        contents = await file.read()
-        image = Image.open(io.BytesIO(contents)).convert("RGB")
-        prev_result = json.loads(context)
+        question = body.get("question", "")
+        context = body.get("context", {})
 
-        answer = health_analyzer.ask_question(image, question, prev_result)
+        answer = health_analyzer.ask_question_text(question, context)
         return {"answer": answer}
     except Exception as e:
         traceback.print_exc()

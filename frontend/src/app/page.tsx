@@ -155,22 +155,17 @@ export default function Home() {
   };
 
   const handleFollowUp = async () => {
-    if (!chatInput.trim() || !file || !result) return;
+    if (!chatInput.trim() || !result) return;
     const question = chatInput.trim();
     setChatInput("");
     setChatMessages((prev) => [...prev, { role: "user", text: question }]);
     setChatLoading(true);
 
     try {
-      const compressed = await compressImage(file);
-      const formData = new FormData();
-      formData.append("file", compressed);
-      formData.append("question", question);
-      formData.append("context", JSON.stringify(result));
-
       const response = await fetch(`${API_URL}/ask`, {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question, context: result }),
         signal: AbortSignal.timeout(60000),
       });
 

@@ -202,3 +202,45 @@ Keep the answer concise and helpful (2-4 sentences). Do not use markdown formatt
             return completion.choices[0].message.content.strip()
         except Exception as e:
             return f"Sorry, I couldn't answer that: {str(e)}"
+
+    def ask_question_text(self, question: str, context: dict) -> str:
+        """Answer a follow-up question using only text context (no image resend)."""
+        if not self.client:
+            return "Unable to answer — GROQ_API_KEY not set."
+
+        context_summary = (
+            f"Plant: {context.get('plant', {}).get('plant_name', 'Unknown')} "
+            f"({context.get('plant', {}).get('scientific_name', '')}).\n"
+            f"Category: {context.get('plant', {}).get('category', '')}.\n"
+            f"Origin: {context.get('plant', {}).get('origin', '')}.\n"
+            f"Health: {context.get('health', {}).get('status', 'unknown')} - "
+            f"{context.get('health', {}).get('condition', '')}.\n"
+            f"Details: watering={context.get('details', {}).get('watering', '')}, "
+            f"sunlight={context.get('details', {}).get('sunlight', '')}, "
+            f"toxicity={context.get('details', {}).get('toxicity', '')}."
+        )
+
+        prompt = f"""You are a plant expert. You previously analyzed a plant and found:
+
+{context_summary}
+
+The user asks: "{question}"
+
+Answer concisely (2-4 sentences) based on your botanical knowledge about this specific plant."""
+
+        try:
+            completion = self.client.chat.completions.create(
+                model=self.MODEL,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    }
+                ],
+                temperature=0.4,
+                max_completion_tokens=512,
+            )
+
+            return completion.choices[0].message.content.strip()
+        except Exception as e:
+            return f"Sorry, I couldn't answer that: {str(e)}"
