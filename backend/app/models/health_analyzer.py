@@ -230,7 +230,7 @@ Answer concisely (2-4 sentences) based on your botanical knowledge about this sp
 
         try:
             completion = self.client.chat.completions.create(
-                model=self.MODEL,
+                model="llama-3.3-70b-versatile",
                 messages=[
                     {
                         "role": "user",

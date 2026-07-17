@@ -102,6 +102,9 @@ async def ask_followup(body: dict):
         question = body.get("question", "")
         context = body.get("context", {})
 
+        if not question:
+            return JSONResponse(status_code=400, content={"error": "No question provided"})
+
         answer = health_analyzer.ask_question_text(question, context)
         return {"answer": answer}
     except Exception as e:
