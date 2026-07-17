@@ -76,9 +76,13 @@ Respond in this exact JSON format (no markdown, no extra text):
 
         messages = [
             {
+                "role": "system",
+                "content": "/no_think"
+            },
+            {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "Do NOT use <think> tags. Respond ONLY with the JSON object, nothing else.\n\n" + self.PROMPT},
+                    {"type": "text", "text": self.PROMPT},
                     {
                         "type": "image_url",
                         "image_url": {
@@ -90,7 +94,7 @@ Respond in this exact JSON format (no markdown, no extra text):
         ]
 
         try:
-            # Try primary model, fall back if unavailable
+            # Try primary model
             try:
                 completion = self.client.chat.completions.create(
                     model=self.MODEL,
@@ -99,24 +103,9 @@ Respond in this exact JSON format (no markdown, no extra text):
                     max_completion_tokens=4096,
                 )
             except Exception:
-                # Fallback model - add instruction to skip thinking
-                fallback_messages = [
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": "Do NOT use <think> tags. Respond ONLY with the JSON object, nothing else.\n\n" + self.PROMPT},
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{base64_image}",
-                                },
-                            },
-                        ],
-                    }
-                ]
                 completion = self.client.chat.completions.create(
                     model=self.FALLBACK_MODEL,
-                    messages=fallback_messages,
+                    messages=messages,
                     temperature=0.3,
                     max_completion_tokens=4096,
                 )
@@ -129,10 +118,18 @@ Respond in this exact JSON format (no markdown, no extra text):
                 if think_end != -1:
                     response_text = response_text[think_end + 8:].strip()
                 else:
-                    # Thinking tag opened but not closed, try to find JSON
+                    # Thinking never ended — try to extract JSON from response
                     json_start = response_text.find("{")
                     if json_start != -1:
                         response_text = response_text[json_start:]
+                    else:
+                        # No JSON found at all, return error
+                        return {
+                            "status": "error",
+                            "condition": "Model response was incomplete. Please try again.",
+                            "confidence": 0.0,
+                            "all_predictions": [],
+                        }
 
             # Parse JSON from response
             # Handle case where model wraps in markdown code block
