@@ -17,8 +17,8 @@ class HealthAnalyzer:
     Free tier: 30 requests/minute, no credit card required.
     """
 
-    MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
-    FALLBACK_MODEL = "qwen/qwen3.6-27b"
+    MODEL = "qwen/qwen3.6-27b"
+    FALLBACK_MODEL = "llama-3.3-70b-versatile"
 
     PROMPT = """You are a plant, tree, fruit, and vegetable expert botanist. Analyze this image and provide detailed information.
 
@@ -78,7 +78,7 @@ Respond in this exact JSON format (no markdown, no extra text):
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": self.PROMPT},
+                    {"type": "text", "text": "Do NOT use <think> tags. Respond ONLY with the JSON object, nothing else.\n\n" + self.PROMPT},
                     {
                         "type": "image_url",
                         "image_url": {
@@ -96,14 +96,29 @@ Respond in this exact JSON format (no markdown, no extra text):
                     model=self.MODEL,
                     messages=messages,
                     temperature=0.3,
-                    max_completion_tokens=2048,
+                    max_completion_tokens=4096,
                 )
             except Exception:
+                # Fallback model - add instruction to skip thinking
+                fallback_messages = [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "Do NOT use <think> tags. Respond ONLY with the JSON object, nothing else.\n\n" + self.PROMPT},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{base64_image}",
+                                },
+                            },
+                        ],
+                    }
+                ]
                 completion = self.client.chat.completions.create(
                     model=self.FALLBACK_MODEL,
-                    messages=messages,
+                    messages=fallback_messages,
                     temperature=0.3,
-                    max_completion_tokens=2048,
+                    max_completion_tokens=4096,
                 )
 
             response_text = completion.choices[0].message.content.strip()
