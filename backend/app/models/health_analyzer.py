@@ -77,7 +77,7 @@ Respond in this exact JSON format (no markdown, no extra text):
         messages = [
             {
                 "role": "system",
-                "content": "/no_think"
+                "content": "You are a plant identification API. Return ONLY valid JSON. No explanations, no thinking, no markdown."
             },
             {
                 "role": "user",
@@ -99,15 +99,15 @@ Respond in this exact JSON format (no markdown, no extra text):
                 completion = self.client.chat.completions.create(
                     model=self.MODEL,
                     messages=messages,
-                    temperature=0.3,
-                    max_completion_tokens=4096,
+                    temperature=0,
+                    max_completion_tokens=2048,
                 )
             except Exception:
                 completion = self.client.chat.completions.create(
                     model=self.FALLBACK_MODEL,
                     messages=messages,
-                    temperature=0.3,
-                    max_completion_tokens=4096,
+                    temperature=0,
+                    max_completion_tokens=2048,
                 )
 
             response_text = completion.choices[0].message.content.strip()
