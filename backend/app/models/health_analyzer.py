@@ -90,21 +90,12 @@ Respond in this exact JSON format (no markdown, no extra text):
         ]
 
         try:
-            # Try primary model
-            try:
-                completion = self.client.chat.completions.create(
-                    model=self.MODEL,
-                    messages=messages,
-                    temperature=0.3,
-                    max_completion_tokens=8192,
-                )
-            except Exception:
-                completion = self.client.chat.completions.create(
-                    model=self.FALLBACK_MODEL,
-                    messages=messages,
-                    temperature=0.3,
-                    max_completion_tokens=8192,
-                )
+            completion = self.client.chat.completions.create(
+                model=self.MODEL,
+                messages=messages,
+                temperature=0.3,
+                max_completion_tokens=8192,
+            )
 
             response_text = completion.choices[0].message.content.strip()
 
