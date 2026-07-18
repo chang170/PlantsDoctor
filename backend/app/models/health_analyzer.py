@@ -20,36 +20,31 @@ class HealthAnalyzer:
     MODEL = "qwen/qwen3.6-27b"
     FALLBACK_MODEL = "llama-3.3-70b-versatile"
 
-    PROMPT = """You are a plant, tree, fruit, and vegetable expert botanist. Analyze this image and provide detailed information.
-
-If the image shows a fruit or vegetable, include ripeness, edibility, nutrition, and storage info.
-If the image shows a plant or tree, include care information.
-
-Respond in this exact JSON format (no markdown, no extra text):
+    PROMPT = """Identify this plant/fruit/vegetable. Return ONLY this JSON (no other text):
 {
-  "plant_name": "common name of the plant/fruit/vegetable",
-  "scientific_name": "Latin/botanical name",
-  "other_common_names": ["other names people call it"],
-  "origin": "native region or country of origin",
-  "category": "houseplant", "tree", "flower", "fruit", "vegetable", "succulent", "herb", or "other",
-  "status": "healthy" or "unhealthy",
-  "condition": "brief description of the condition",
-  "confidence": 0.0 to 1.0,
-  "problems": ["list of problems if any"],
-  "suggestions": ["list of care suggestions"],
-  "watering": "watering needs description",
-  "sunlight": "sunlight requirements",
-  "soil_type": "preferred soil type",
-  "toxicity": "toxicity info for pets and children",
-  "growth_rate": "slow, medium, or fast",
-  "mature_size": "expected mature height and spread",
-  "season": "blooming, fruiting, or harvest season",
-  "difficulty": "easy, moderate, or hard to care for",
-  "fun_fact": "an interesting fact about this plant",
-  "ripeness": "ripe, unripe, or overripe (for fruits/vegetables only, otherwise null)",
-  "edibility": "is it safe to eat, any warnings (for fruits/vegetables only, otherwise null)",
-  "nutrition": "key vitamins and minerals (for fruits/vegetables only, otherwise null)",
-  "storage_tips": "how to store it (for fruits/vegetables only, otherwise null)"
+  "plant_name": "common name",
+  "scientific_name": "Latin name",
+  "other_common_names": ["aliases"],
+  "origin": "native region",
+  "category": "houseplant/tree/flower/fruit/vegetable/succulent/herb/other",
+  "status": "healthy/unhealthy",
+  "condition": "brief condition description",
+  "confidence": 0.0-1.0,
+  "problems": ["issues if any"],
+  "suggestions": ["care tips"],
+  "watering": "watering needs",
+  "sunlight": "light requirements",
+  "soil_type": "soil preference",
+  "toxicity": "toxic to pets/children?",
+  "growth_rate": "slow/medium/fast",
+  "mature_size": "height and spread",
+  "season": "bloom/harvest season",
+  "difficulty": "easy/moderate/hard",
+  "fun_fact": "interesting fact",
+  "ripeness": "ripe/unripe/overripe (fruits only, else null)",
+  "edibility": "safe to eat? (fruits only, else null)",
+  "nutrition": "key nutrients (fruits only, else null)",
+  "storage_tips": "how to store (fruits only, else null)"
 }"""
 
     def __init__(self):
@@ -69,9 +64,18 @@ Respond in this exact JSON format (no markdown, no extra text):
                 "all_predictions": [],
             }
 
-        # Convert image to base64
+        # Resize and compress image to stay within token limits
+        width, height = image.size
+        max_size = 512
+        if width > max_size or height > max_size:
+            if width > height:
+                new_height = int((height / width) * max_size)
+                image = image.resize((max_size, new_height))
+            else:
+                new_width = int((width / height) * max_size)
+                image = image.resize((new_width, max_size))
         buffered = BytesIO()
-        image.save(buffered, format="JPEG", quality=85)
+        image.save(buffered, format="JPEG", quality=50)
         base64_image = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
         messages = [
@@ -94,7 +98,7 @@ Respond in this exact JSON format (no markdown, no extra text):
                 model=self.MODEL,
                 messages=messages,
                 temperature=0.3,
-                max_completion_tokens=8192,
+                max_completion_tokens=4096,
             )
 
             response_text = completion.choices[0].message.content.strip()
